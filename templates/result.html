@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}Analysis Result - Lung Disease Classification{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-image"></i> Uploaded X-ray Image</h5>
+            </div>
+            <div class="card-body text-center">
+                <img src="data:image/jpeg;base64,{{ image_data }}" class="img-fluid rounded" alt="Uploaded X-ray" style="max-height: 400px;">
+                <p class="text-muted mt-2"><small>{{ filename }}</small></p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-bar"></i> Analysis Results</h5>
+            </div>
+            <div class="card-body">
+                <!-- Primary Prediction -->
+                <div class="alert {% if result.class == 'Normal' %}alert-success{% elif result.class == 'Lung Opacity' %}alert-warning{% else %}alert-danger{% endif %} text-center">
+                    <h4>
+                        {% if result.class == 'Normal' %}
+                            <i class="fas fa-check-circle"></i>
+                        {% elif result.class == 'Lung Opacity' %}
+                            <i class="fas fa-exclamation-triangle"></i>
+                        {% else %}
+                            <i class="fas fa-virus"></i>
+                        {% endif %}
+                        {{ result.class }}
+                    </h4>
+                    <p class="mb-0">Confidence: <strong>{{ "%.1f"|format(result.confidence * 100) }}%</strong></p>
+                </div>
+
+                <!-- Detailed Predictions -->
+                <h6><i class="fas fa-info-circle"></i> Detailed Analysis:</h6>
+                <div class="mb-3">
+                    {% for class_name, probability in result.all_predictions.items() %}
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span>
+                                {% if class_name == 'Normal' %}
+                                    <i class="fas fa-check-circle text-success"></i>
+                                {% elif class_name == 'Lung Opacity' %}
+                                    <i class="fas fa-exclamation-triangle text-warning"></i>
+                                {% else %}
+                                    <i class="fas fa-virus text-danger"></i>
+                                {% endif %}
+                                {{ class_name }}
+                            </span>
+                            <strong>{{ "%.1f"|format(probability * 100) }}%</strong>
+                        </div>
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar 
+                                {% if class_name == 'Normal' %}bg-success
+                                {% elif class_name == 'Lung Opacity' %}bg-warning
+                                {% else %}bg-danger{% endif %}" 
+                                style="width: {{ probability * 100 }}%"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Disclaimer -->
+                <div class="alert alert-info">
+                    <small>
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Disclaimer:</strong> This AI analysis is for educational purposes only. 
+                        Please consult with healthcare professionals for medical diagnosis and treatment.
+                    </small>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="d-grid gap-2">
+                    <a href="/" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Analyze Another Image
+                    </a>
+                    <button class="btn btn-outline-secondary" onclick="downloadResults()">
+                        <i class="fas fa-download"></i> Download Results
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Additional Information -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6><i class="fas fa-lightbulb"></i> Understanding the Results</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <h6 class="text-success"><i class="fas fa-check-circle"></i> Normal</h6>
+                        <p class="small">Indicates healthy lung tissue with no visible abnormalities in the X-ray image.</p>
+                    </div>
+                    <div class="col-md-4">
+                        <h6 class="text-warning"><i class="fas fa-exclamation-triangle"></i> Lung Opacity</h6>
+                        <p class="small">Suggests presence of abnormal areas in the lungs that may require medical attention.</p>
+                    </div>
+                    <div class="col-md-4">
+                        <h6 class="text-danger"><i class="fas fa-virus"></i> Viral Pneumonia</h6>
+                        <p class="small">Indicates patterns consistent with viral pneumonia infection.</p>
+                    </div>
+                </div>
+                <hr>
+                <p class="text-muted small mb-0">
+                    <i class="fas fa-exclamation-triangle text-warning"></i>
+                    <strong>Important:</strong> This AI model is trained for educational and research purposes. 
+                    Always seek professional medical advice for health concerns.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function downloadResults() {
+        const results = {
+            prediction: "{{ result.class }}",
+            confidence: {{ result.confidence }},
+            filename: "{{ filename }}",
+            all_predictions: {{ result.all_predictions|tojson }},
+            timestamp: new Date().toISOString()
+        };
+        
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(results, null, 2));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", "lung_disease_analysis_" + new Date().getTime() + ".json");
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+    }
+</script>
+{% endblock %}
